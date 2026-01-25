@@ -1,52 +1,57 @@
-# Multi-stage build for CRM Node.js Service
+# Multi-stage build for CRM Agent Portal (React + Vite)
 # Stage 1: Build
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm@latest
+
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY . .
+COPY src ./src
+COPY vite.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY eslint.config.js ./
 
-# Build if needed
-RUN npm run build 2>/dev/null || true
+# Build the application
+RUN pnpm run build
 
-# Stage 2: Runtime
-FROM node:22-alpine
+# Stage 2: Serve with nginx
+FROM nginx:alpine
 
 LABEL maintainer="CRM Team"
-LABEL description="CRM Node.js Service"
+LABEL description="CRM Agent Portal"
 LABEL version="1.0.0"
 
 # Create non-root user
 RUN addgroup -g 1000 crm && \
     adduser -D -u 1000 -G crm crm
 
-WORKDIR /app
+# Copy nginx config
+RUN echo 'server { listen 3000; server_name _; root /app/dist; index index.html; location / { try_files $uri $uri/ /index.html; } location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { expires 1y; add_header Cache-Control "public, immutable"; } }' > /etc/nginx/conf.d/default.conf
 
-# Copy from builder
-COPY --from=builder --chown=crm:crm /app/node_modules ./node_modules
-COPY --from=builder --chown=crm:crm /app/dist ./dist
-COPY --from=builder --chown=crm:crm /app/package*.json ./
+# Copy built application from builder
+COPY --from=builder --chown=crm:crm /app/dist /app/dist
+
+# Change ownership of nginx directories
+RUN chown -R crm:crm /var/cache/nginx /var/log/nginx /var/run /etc/nginx/conf.d
 
 # Switch to non-root user
 USER crm
 
 # Expose port
-EXPOSE 3000 9090
+EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Environment
-ENV NODE_ENV=production
-
-# Run the application
-CMD ["node", "dist/index.js"]
-
+# Run nginx
+CMD ["nginx", "-g", "daemon off;"]

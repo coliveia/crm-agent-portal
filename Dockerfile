@@ -4,16 +4,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm@latest
-
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
-# Copy source code
+# Copy source code and config files
+COPY index.html ./
+COPY public ./public
 COPY src ./src
 COPY vite.config.js ./
 COPY tailwind.config.js ./

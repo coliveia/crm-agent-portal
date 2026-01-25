@@ -30,9 +30,9 @@ LABEL maintainer="CRM Team"
 LABEL description="CRM Agent Portal"
 LABEL version="1.0.0"
 
-# Create non-root user
-RUN addgroup -g 1000 crm && \
-    adduser -D -u 1000 -G crm crm
+# Create non-root user with different GID
+RUN addgroup -g 1001 crm && \
+    adduser -D -u 1001 -G crm crm
 
 # Copy nginx config
 RUN echo 'server { listen 3000; server_name _; root /app/dist; index index.html; location / { try_files $uri $uri/ /index.html; } location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { expires 1y; add_header Cache-Control "public, immutable"; } }' > /etc/nginx/conf.d/default.conf

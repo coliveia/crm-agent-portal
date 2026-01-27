@@ -2,12 +2,15 @@ const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 module.exports = {
-  mode: 'development',
+  mode: isProduction ? 'production' : 'development',
   entry: './src/index.jsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].[contenthash].js',
+    chunkFilename: '[name].[contenthash].chunk.js',
     publicPath: '/',
     library: '@crm/agent-portal',
     libraryTarget: 'umd',
@@ -24,10 +27,6 @@ module.exports = {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
     },
-  },
-  externals: {
-    react: 'React',
-    'react-dom': 'ReactDOM',
   },
   module: {
     rules: [
@@ -70,13 +69,15 @@ module.exports = {
       template: './index.html',
       filename: 'index.html',
       inject: 'body',
+      scriptLoading: 'defer',
     }),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
       'process.env.REACT_APP_BFF_URL': JSON.stringify(process.env.REACT_APP_BFF_URL || 'http://localhost:3000'),
     }),
   ],
   optimization: {
+    minimize: isProduction,
     splitChunks: {
       chunks: 'all',
       minSize: 20000,
@@ -101,8 +102,8 @@ module.exports = {
     sideEffects: false,
   },
   performance: {
-    hints: false,
-    maxEntrypointSize: 500000,
-    maxAssetSize: 500000,
+    hints: isProduction ? 'warning' : false,
+    maxEntrypointSize: isProduction ? 300000 : 500000,
+    maxAssetSize: isProduction ? 300000 : 500000,
   },
 };

@@ -1,18 +1,14 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import webpack from 'webpack';
-import HtmlWebpackPlugin from 'html-webpack-plugin';
+const path = require('path');
+const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export default {
+module.exports = {
   mode: 'development',
   entry: './src/index.jsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].[contenthash].js',
-    publicPath: '/agent/',
+    publicPath: '/',
     library: '@crm/agent-portal',
     libraryTarget: 'umd',
     globalObject: 'this',
@@ -22,6 +18,7 @@ export default {
     port: 5175,
     historyApiFallback: true,
     hot: true,
+    allowedHosts: 'all',
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
@@ -51,6 +48,15 @@ export default {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
+      {
+        test: /\.(png|jpg|jpeg|gif|svg)$/,
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 8 * 1024,
+          },
+        },
+      },
     ],
   },
   resolve: {
@@ -63,6 +69,7 @@ export default {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
+      inject: 'body',
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
@@ -72,6 +79,8 @@ export default {
   optimization: {
     splitChunks: {
       chunks: 'all',
+      minSize: 20000,
+      maxSize: 200000,
       cacheGroups: {
         vendor: {
           test: /[\\/]node_modules[\\/]/,
@@ -79,7 +88,21 @@ export default {
           priority: 10,
           reuseExistingChunk: true,
         },
+        common: {
+          minChunks: 2,
+          priority: 5,
+          reuseExistingChunk: true,
+          minSize: 0,
+        },
       },
     },
+    runtimeChunk: 'single',
+    usedExports: true,
+    sideEffects: false,
+  },
+  performance: {
+    hints: false,
+    maxEntrypointSize: 500000,
+    maxAssetSize: 500000,
   },
 };

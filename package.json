@@ -10,26 +10,29 @@
     "preview": "webpack serve --mode development"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "axios": "^1.6.5",
+    "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "single-spa-react": "^4.3.0",
-    "lucide-react": "^0.563.0",
-    "axios": "^1.6.5"
+    "react-router-dom": "^6.30.3",
+    "recharts": "^3.7.0",
+    "single-spa-react": "^4.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
     "@babel/preset-react": "^7.22.0",
     "babel-loader": "^9.1.0",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.0",
-    "webpack-dev-server": "^4.15.0",
     "css-loader": "^6.8.0",
-    "style-loader": "^3.3.0",
-    "html-webpack-plugin": "^5.6.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.0",
-    "eslint-plugin-react-hooks": "^4.6.0"
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "html-webpack-plugin": "^5.6.0",
+    "style-loader": "^3.3.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0"
   },
   "engines": {
     "node": ">=22.0.0",

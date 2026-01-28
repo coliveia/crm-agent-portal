@@ -1,86 +1,91 @@
-import React from 'react';
-import { Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, Pause, XCircle } from 'lucide-react';
 
 /**
- * SLA Indicator Component
+ * SLA Indicator Component - Futuristic Design
  * Displays SLA status with visual progress bar and alerts
  */
-const SLAIndicator = ({ sla }) => {
+export default function SLAIndicator({ sla }) {
   if (!sla) {
     return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-500">SLA não disponível</p>
+      <div className="sla-indicator sla-empty">
+        <Clock size={18} />
+        <span>SLA não disponível</span>
       </div>
     );
   }
 
-  const getStatusColor = (status) => {
+  const getStatusConfig = (status) => {
     switch (status) {
+      case 'NORMAL':
       case 'ON_TRACK':
-        return 'text-green-600 bg-green-50';
+        return {
+          color: '#10b981',
+          bgColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: 'rgba(16, 185, 129, 0.2)',
+          label: 'Dentro do SLA',
+          icon: CheckCircle
+        };
+      case 'WARNING':
       case 'AT_RISK':
-        return 'text-yellow-600 bg-yellow-50';
+        return {
+          color: '#f59e0b',
+          bgColor: 'rgba(245, 158, 11, 0.1)',
+          borderColor: 'rgba(245, 158, 11, 0.2)',
+          label: 'Atenção',
+          icon: AlertTriangle
+        };
+      case 'CRITICAL':
+        return {
+          color: '#ef4444',
+          bgColor: 'rgba(239, 68, 68, 0.1)',
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+          label: 'SLA em Risco',
+          icon: AlertTriangle
+        };
       case 'BREACHED':
-        return 'text-red-600 bg-red-50';
+        return {
+          color: '#dc2626',
+          bgColor: 'rgba(220, 38, 38, 0.1)',
+          borderColor: 'rgba(220, 38, 38, 0.2)',
+          label: 'SLA Violado',
+          icon: XCircle
+        };
       case 'COMPLETED':
-        return 'text-blue-600 bg-blue-50';
+        return {
+          color: '#3b82f6',
+          bgColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: 'rgba(59, 130, 246, 0.2)',
+          label: 'Concluído',
+          icon: CheckCircle
+        };
       default:
-        return 'text-gray-600 bg-gray-50';
+        return {
+          color: '#6b7280',
+          bgColor: 'rgba(107, 114, 128, 0.1)',
+          borderColor: 'rgba(107, 114, 128, 0.2)',
+          label: 'Desconhecido',
+          icon: Clock
+        };
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'ON_TRACK':
-        return <CheckCircle className="w-5 h-5" />;
-      case 'AT_RISK':
-        return <AlertTriangle className="w-5 h-5" />;
-      case 'BREACHED':
-        return <XCircle className="w-5 h-5" />;
-      case 'COMPLETED':
-        return <CheckCircle className="w-5 h-5" />;
-      default:
-        return <Clock className="w-5 h-5" />;
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'ON_TRACK':
-        return 'No Prazo';
-      case 'AT_RISK':
-        return 'Em Risco';
-      case 'BREACHED':
-        return 'Vencido';
-      case 'COMPLETED':
-        return 'Concluído';
-      default:
-        return 'Desconhecido';
-    }
-  };
-
-  const getProgressBarColor = (status) => {
-    switch (status) {
-      case 'ON_TRACK':
-        return 'bg-green-500';
-      case 'AT_RISK':
-        return 'bg-yellow-500';
-      case 'BREACHED':
-        return 'bg-red-500';
-      case 'COMPLETED':
-        return 'bg-blue-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
+  // Support both old and new SLA format
+  const status = sla.status || sla.overallStatus || 'NORMAL';
+  const config = getStatusConfig(status);
+  const StatusIcon = config.icon;
+  
+  // Calculate percentage - support both formats
+  const totalTime = sla.totalTime || sla.resolutionTimeMinutes || 480;
+  const remainingTime = sla.remainingTime !== undefined ? sla.remainingTime : (sla.resolutionRemaining || 0);
+  const elapsedTime = sla.elapsedTime || (totalTime - remainingTime);
+  const percentage = Math.max(0, Math.min(100, (remainingTime / totalTime) * 100));
+  
+  // Format time
   const formatTime = (minutes) => {
-    if (minutes === 0) return 'Concluído';
-    if (minutes < 0) return 'Vencido';
-    
+    if (minutes === undefined || minutes === null) return '-';
+    if (minutes <= 0) return '0m';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    
     if (hours > 24) {
       const days = Math.floor(hours / 24);
       return `${days}d ${hours % 24}h`;
@@ -92,122 +97,186 @@ const SLAIndicator = ({ sla }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">SLA do Atendimento</h3>
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusColor(sla.overallStatus)}`}>
-          {getStatusIcon(sla.overallStatus)}
-          <span className="text-sm font-medium">{getStatusLabel(sla.overallStatus)}</span>
+    <div 
+      className="sla-indicator"
+      style={{ 
+        background: config.bgColor,
+        borderColor: config.borderColor
+      }}
+    >
+      <div className="sla-header">
+        <div className="sla-status" style={{ color: config.color }}>
+          <StatusIcon size={18} />
+          <span>{config.label}</span>
         </div>
-      </div>
-
-      {/* Response SLA */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-gray-700">Primeira Resposta</span>
-          <div className="flex items-center gap-2">
-            <span className={`font-semibold ${
-              sla.responseStatus === 'BREACHED' ? 'text-red-600' :
-              sla.responseStatus === 'AT_RISK' ? 'text-yellow-600' :
-              sla.responseStatus === 'COMPLETED' ? 'text-blue-600' :
-              'text-green-600'
-            }`}>
-              {formatTime(sla.responseRemaining)}
-            </span>
-            {sla.responseStatus !== 'COMPLETED' && (
-              <span className="text-gray-500">
-                / {formatTime(sla.responseTimeMinutes)}
-              </span>
-            )}
+        {sla.paused && (
+          <div className="sla-paused">
+            <Pause size={14} />
+            <span>Pausado</span>
           </div>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div
-            className={`h-2.5 rounded-full transition-all duration-300 ${getProgressBarColor(sla.responseStatus)}`}
-            style={{ width: `${Math.min(100, sla.responseProgress)}%` }}
-          />
-        </div>
-        
-        {sla.firstResponseAt && (
-          <p className="text-xs text-gray-500">
-            Respondido em {new Date(sla.firstResponseAt).toLocaleString('pt-BR')}
-          </p>
         )}
       </div>
 
-      {/* Resolution SLA */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-gray-700">Resolução</span>
-          <div className="flex items-center gap-2">
-            <span className={`font-semibold ${
-              sla.resolutionStatus === 'BREACHED' ? 'text-red-600' :
-              sla.resolutionStatus === 'AT_RISK' ? 'text-yellow-600' :
-              sla.resolutionStatus === 'COMPLETED' ? 'text-blue-600' :
-              'text-green-600'
-            }`}>
-              {formatTime(sla.resolutionRemaining)}
-            </span>
-            {sla.resolutionStatus !== 'COMPLETED' && (
-              <span className="text-gray-500">
-                / {formatTime(sla.resolutionTimeMinutes)}
-              </span>
-            )}
+      <div className="sla-content">
+        <div className="sla-time">
+          <Clock size={20} style={{ color: config.color }} />
+          <span className="time-value" style={{ color: config.color }}>
+            {formatTime(remainingTime)}
+          </span>
+          <span className="time-label">restante</span>
+        </div>
+
+        <div className="sla-progress-container">
+          <div className="sla-progress-bar">
+            <div 
+              className="sla-progress-fill"
+              style={{ 
+                width: `${percentage}%`,
+                background: `linear-gradient(90deg, ${config.color} 0%, ${config.color}88 100%)`
+              }}
+            >
+              {percentage > 10 && (
+                <div className="progress-glow" style={{ background: config.color }}></div>
+              )}
+            </div>
+          </div>
+          <div className="sla-progress-labels">
+            <span>{formatTime(elapsedTime)} decorrido</span>
+            <span>{formatTime(totalTime)} total</span>
           </div>
         </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div
-            className={`h-2.5 rounded-full transition-all duration-300 ${getProgressBarColor(sla.resolutionStatus)}`}
-            style={{ width: `${Math.min(100, sla.resolutionProgress)}%` }}
-          />
-        </div>
-        
-        {sla.resolvedAt && (
-          <p className="text-xs text-gray-500">
-            Resolvido em {new Date(sla.resolvedAt).toLocaleString('pt-BR')}
-          </p>
-        )}
       </div>
 
-      {/* Alerts */}
-      {(sla.paused || sla.escalated) && (
-        <div className="pt-4 border-t border-gray-200 space-y-2">
-          {sla.paused && (
-            <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded">
-              <Clock className="w-4 h-4" />
-              <span>SLA pausado ({formatTime(sla.pausedDurationMinutes)} acumulado)</span>
-            </div>
-          )}
-          {sla.escalated && (
-            <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-3 py-2 rounded">
-              <AlertTriangle className="w-4 h-4" />
-              <span>Caso escalado em {new Date(sla.escalatedAt).toLocaleString('pt-BR')}</span>
-            </div>
-          )}
+      {(status === 'CRITICAL' || status === 'AT_RISK') && !sla.paused && (
+        <div className="sla-alert">
+          <AlertTriangle size={14} />
+          <span>Priorize este atendimento para evitar violação do SLA</span>
         </div>
       )}
 
-      {/* Priority Badge */}
-      <div className="pt-4 border-t border-gray-200">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Prioridade</span>
-          <span className={`px-3 py-1 rounded-full font-medium ${
-            sla.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-            sla.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-            sla.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-green-100 text-green-700'
-          }`}>
-            {sla.priority}
-          </span>
-        </div>
-      </div>
+      <style>{`
+        .sla-indicator {
+          padding: 1rem 1.25rem;
+          border-radius: var(--radius-xl);
+          border: 1px solid;
+          transition: var(--transition-normal);
+        }
+
+        .sla-indicator.sla-empty {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          background: rgba(107, 114, 128, 0.1);
+          border-color: rgba(107, 114, 128, 0.2);
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+        }
+
+        .sla-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+        }
+
+        .sla-status {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .sla-paused {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.25rem 0.5rem;
+          background: rgba(107, 114, 128, 0.1);
+          border-radius: var(--radius-sm);
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+        }
+
+        .sla-content {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .sla-time {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-shrink: 0;
+        }
+
+        .time-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+
+        .time-label {
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+        }
+
+        .sla-progress-container {
+          flex: 1;
+        }
+
+        .sla-progress-bar {
+          height: 8px;
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: var(--radius-full);
+          overflow: hidden;
+          margin-bottom: 0.5rem;
+        }
+
+        .sla-progress-fill {
+          height: 100%;
+          border-radius: var(--radius-full);
+          position: relative;
+          transition: width 0.5s ease;
+        }
+
+        .progress-glow {
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 20px;
+          filter: blur(8px);
+          opacity: 0.6;
+          animation: pulse 2s infinite;
+        }
+
+        .sla-progress-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.625rem;
+          color: var(--text-muted);
+        }
+
+        .sla-alert {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 0.75rem;
+          padding: 0.5rem 0.75rem;
+          background: rgba(239, 68, 68, 0.1);
+          border-radius: var(--radius-md);
+          font-size: 0.75rem;
+          color: var(--danger);
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+      `}</style>
     </div>
   );
-};
-
-export default SLAIndicator;
+}

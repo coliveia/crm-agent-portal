@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { 
   Bell, User, LogOut, MessageSquare, Settings, Menu, X, 
   LayoutDashboard, Users, FileText, Bot, Search, ChevronDown,
-  Sparkles, Phone, Mail, Clock, AlertTriangle
+  Sparkles, Phone, Mail, Clock, AlertTriangle, Eye
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import CaseList from './components/CaseList';
 import CaseDetail from './components/CaseDetail';
 import Customer360 from './components/Customer360';
 import CopilotPanel from './components/CopilotPanel';
+import Visao360View from './components/Visao360View';
 import './App.css';
 
 function App() {
@@ -36,7 +37,8 @@ function App() {
     { name: 'Dashboard', icon: LayoutDashboard, tab: 'dashboard' },
     { name: 'Meus Casos', icon: FileText, tab: 'cases', badge: 5 },
     { name: 'Clientes', icon: Users, tab: 'customers' },
-    { name: 'Copilot IA', icon: Bot, tab: 'copilot' }
+    { name: 'Copilot IA', icon: Bot, tab: 'copilot' },
+    { name: 'Visão 360', icon: Eye, tab: 'visao360' }
   ];
 
   const handleCaseSelect = (caseItem) => {
@@ -243,10 +245,16 @@ function App() {
               <CopilotPanel fullScreen={true} caseData={selectedCase} />
             </div>
           )}
+
+          {activeTab === 'visao360' && (
+            <div className="visao360-view animate-fade-in-up">
+              <Visao360View />
+            </div>
+          )}
         </main>
 
         {/* Copilot Side Panel */}
-        {copilotOpen && activeTab !== 'copilot' && (
+        {copilotOpen && activeTab !== 'copilot' && activeTab !== 'visao360' && (
           <aside className="copilot-sidebar animate-slide-in-right">
             <CopilotPanel caseData={selectedCase} customerData={selectedCustomer} />
           </aside>

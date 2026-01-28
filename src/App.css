@@ -536,3 +536,10 @@
     transform: translateX(-100%);
   }
 }
+
+
+/* ===== VISÃO 360 VIEW ===== */
+.visao360-view {
+  height: calc(100vh - 140px);
+  overflow: hidden;
+}

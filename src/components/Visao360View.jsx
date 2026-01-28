@@ -1,71 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   User, Phone, PhoneCall, Mail, Video, MoreHorizontal, Clock, 
   FileText, AlertCircle, Calendar, Wifi, WifiOff, Home, 
   CreditCard, Shield, ChevronRight, Settings, Eye, History,
   Package, Smartphone, Tv, MessageSquare, RefreshCw, Copy,
-  CheckCircle, XCircle, Zap, Star, MapPin
+  CheckCircle, XCircle, Zap, Star, MapPin, Loader
 } from 'lucide-react';
+import { useVisao360 } from '../hooks/useVisao360';
 
-export default function Visao360View() {
+export default function Visao360View({ telefone = '11912345678', customerId = null }) {
   const [activeTab, setActiveTab] = useState('visaoCliente');
+  
+  // Hook para integração com BFF
+  const { 
+    data, 
+    loading, 
+    error, 
+    tempoAtendimento,
+    refresh,
+    setProtocoloAtual,
+    refreshIAResumo
+  } = useVisao360(telefone, customerId);
 
-  // Dados mockados baseados na imagem
-  const cliente = {
-    nome: 'Juliana',
-    telefone: '(11) 91234-5678',
-    tempoAtendimento: '00:00:33',
-    protocoloAtual: '15030714062567',
-    protocolosAbertos: [
-      {
-        id: '#2024110001',
-        tags: ['Sem acesso à internet fixa', 'Visita técnica'],
-        status: 'pending',
-        descricao: 'O cliente solicita mudança de endereço. Um chamado foi aberto com uma visita marcada para o dia 20/09.',
-        plano: 'Vivo Total Família 2',
-        data: '12/12/2024',
-        tipo: 'Loja Vivo'
-      },
-      {
-        id: '#2024110002',
-        tags: ['Transferência de Titularidade'],
-        status: 'processing',
-        descricao: 'O cliente solicitou uma transferência de titularidade. O processo...',
-        plano: 'Vivo Fibra',
-        data: '01/12/2024',
-        tipo: null
-      }
-    ],
-    avisos: [
-      {
-        tipo: 'urgente',
-        titulo: 'Segunda via',
-        descricao: 'Identificamos recorrência na solicitação de segunda via.'
-      }
-    ],
-    iaResumo: {
-      titulo: 'I.Ajuda',
-      badge: 'Vivo Total',
-      mensagem: 'Juliana gostaria de realizar a segunda via pois sua Vivo Fibra ainda não está funcionando. A fatura de setembro ainda não consta como paga no sistema.',
-      acaoSugerida: 'Segunda via'
-    },
-    dadosCadastrais: {
-      nomeCompleto: 'Juliana',
-      tipoCliente: ['Platinum', 'Cliente Tradicional'],
-      cpf: '456.xxx.xxx-98',
-      situacaoFinanceira: {
-        status: 'Recebemos faturas em atraso, a fatura está em aberto.',
-        acao: 'Atualizar fatura'
-      }
-    },
-    apps: [
-      { nome: 'Acessos e e-mail', icon: Mail }
-    ],
-    produtos: [
-      { nome: 'Vivo Total Família 2', tipo: 'plano' },
-      { nome: 'Vivo Pós com Amazon Prime', tipo: 'addon' }
-    ]
-  };
+  // Dados do cliente (do BFF ou fallback)
+  const cliente = data?.cliente || { nome: 'Carregando...', telefone: '', avatar: '?' };
+  const instancia = data?.instancia || { telefone: '' };
+  const protocolos = data?.protocolos || { atual: '', abertos: [], visitaMarcada: null };
+  const avisos = data?.avisos || [];
+  const iaResumo = data?.iaResumo || { titulo: 'I.Ajuda', badge: '', mensagem: 'Carregando...', acaoSugerida: null };
+  const dadosCadastrais = data?.dadosCadastrais || { nomeCompleto: '', tipoCliente: [], cpf: '', situacaoFinanceira: {} };
+  const apps = data?.apps || [];
+  const produtos = data?.produtos || [];
+
+  if (loading) {
+    return (
+      <div className="visao360-loading">
+        <Loader size={48} className="spinner" />
+        <span>Carregando Visão 360...</span>
+        <style>{`
+          .visao360-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 16px;
+            color: #6b7280;
+          }
+          .spinner {
+            animation: spin 1s linear infinite;
+            color: #8b5cf6;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="visao360-container">
@@ -73,13 +66,13 @@ export default function Visao360View() {
       <div className="atendimento-header">
         <div className="cliente-info">
           <div className="cliente-avatar">
-            <span>P</span>
+            <span>{cliente.avatar || cliente.nome?.charAt(0) || 'C'}</span>
           </div>
           <div className="cliente-dados">
             <span className="cliente-nome">{cliente.nome}</span>
             <span className="tempo-atendimento">
               <Clock size={14} />
-              {cliente.tempoAtendimento}
+              {tempoAtendimento}
             </span>
           </div>
         </div>
@@ -138,7 +131,7 @@ export default function Visao360View() {
                 <Home size={18} />
                 <span>Instância</span>
               </div>
-              <span className="telefone-instancia">{cliente.telefone}</span>
+              <span className="telefone-instancia">{instancia.telefone || cliente.telefone}</span>
             </div>
             <button className="btn-gerenciar">
               Gerenciar instância
@@ -162,8 +155,8 @@ export default function Visao360View() {
                 <span>Protocolo atual</span>
               </div>
               <div className="protocolo-numero">
-                <span>{cliente.protocoloAtual}</span>
-                <button className="btn-copy">
+                <span>{protocolos.atual || 'Nenhum'}</span>
+                <button className="btn-copy" onClick={refresh}>
                   <RefreshCw size={14} />
                 </button>
               </div>
@@ -176,26 +169,32 @@ export default function Visao360View() {
                 <span>Protocolos em aberto</span>
               </div>
               
-              <div className="aviso-visita">
-                <RefreshCw size={14} />
-                <span>Juliana já possui uma visita marcada para amanhã</span>
-              </div>
+              {protocolos.visitaMarcada && (
+                <div className="aviso-visita">
+                  <RefreshCw size={14} />
+                  <span>{protocolos.visitaMarcada.mensagem}</span>
+                </div>
+              )}
 
               <div className="protocolos-grid">
-                {cliente.protocolosAbertos.map((protocolo, index) => (
-                  <div key={index} className="protocolo-card">
+                {protocolos.abertos?.map((protocolo, index) => (
+                  <div 
+                    key={index} 
+                    className="protocolo-card"
+                    onClick={() => setProtocoloAtual(protocolo.id)}
+                  >
                     <div className="protocolo-card-header">
-                      <span className="protocolo-id">{protocolo.id}</span>
+                      <span className="protocolo-id">{protocolo.numero || protocolo.id}</span>
                       <ChevronRight size={14} />
                     </div>
                     <div className="protocolo-tags">
-                      {protocolo.tags.map((tag, i) => (
+                      {protocolo.tags?.map((tag, i) => (
                         <span key={i} className={`tag ${i === 0 ? 'tag-primary' : 'tag-secondary'}`}>
                           {tag}
                         </span>
                       ))}
                     </div>
-                    {protocolo.status === 'pending' && (
+                    {protocolo.status === 'Em Andamento' && (
                       <span className="status-icon pending">
                         <AlertCircle size={14} />
                       </span>
@@ -223,21 +222,25 @@ export default function Visao360View() {
           {/* Card Avisos */}
           <div className="card-avisos">
             <span className="card-title">Avisos</span>
-            {cliente.avisos.map((aviso, index) => (
-              <div key={index} className="aviso-item">
-                <div className="aviso-icon">
-                  <FileText size={16} />
+            {avisos.length === 0 ? (
+              <div className="aviso-empty">Nenhum aviso</div>
+            ) : (
+              avisos.map((aviso, index) => (
+                <div key={index} className="aviso-item">
+                  <div className="aviso-icon">
+                    <FileText size={16} />
+                  </div>
+                  <div className="aviso-content">
+                    <span className="aviso-titulo">
+                      {aviso.titulo}
+                      <span className={`aviso-badge ${aviso.tipo}`}>{aviso.badge || 'Crítico'}</span>
+                    </span>
+                    <span className="aviso-descricao">{aviso.descricao}</span>
+                  </div>
+                  <ChevronRight size={14} />
                 </div>
-                <div className="aviso-content">
-                  <span className="aviso-titulo">
-                    {aviso.titulo}
-                    <span className="aviso-badge urgente">Crítico</span>
-                  </span>
-                  <span className="aviso-descricao">{aviso.descricao}</span>
-                </div>
-                <ChevronRight size={14} />
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -249,14 +252,16 @@ export default function Visao360View() {
               <button className="btn-voltar">
                 <ChevronRight size={18} className="rotate-180" />
               </button>
-              <span className="ia-titulo">{cliente.iaResumo.titulo}</span>
-              <span className="ia-badge">{cliente.iaResumo.badge}</span>
+              <span className="ia-titulo">{iaResumo.titulo}</span>
+              <span className="ia-badge">{iaResumo.badge}</span>
             </div>
-            <p className="ia-mensagem">{cliente.iaResumo.mensagem}</p>
-            <button className="btn-acao-ia">
-              <Zap size={16} />
-              {cliente.iaResumo.acaoSugerida}
-            </button>
+            <p className="ia-mensagem">{iaResumo.mensagem}</p>
+            {iaResumo.acaoSugerida && (
+              <button className="btn-acao-ia">
+                <Zap size={16} />
+                {iaResumo.acaoSugerida}
+              </button>
+            )}
           </div>
 
           {/* Card Dados Cadastrais */}
@@ -266,7 +271,7 @@ export default function Visao360View() {
                 <User size={16} />
                 <div className="dados-content">
                   <span className="dados-label">Nome do tratamento</span>
-                  <span className="dados-value">{cliente.dadosCadastrais.nomeCompleto}</span>
+                  <span className="dados-value">{dadosCadastrais.nomeCompleto}</span>
                 </div>
               </div>
               <button className="btn-editar">
@@ -280,7 +285,7 @@ export default function Visao360View() {
                 <div className="dados-content">
                   <span className="dados-label">Tipo de cliente</span>
                   <div className="dados-tags">
-                    {cliente.dadosCadastrais.tipoCliente.map((tipo, i) => (
+                    {dadosCadastrais.tipoCliente?.map((tipo, i) => (
                       <span key={i} className={`tipo-tag ${i === 0 ? 'platinum' : 'tradicional'}`}>
                         {tipo}
                       </span>
@@ -295,7 +300,7 @@ export default function Visao360View() {
                 <CreditCard size={16} />
                 <div className="dados-content">
                   <span className="dados-label">CPF</span>
-                  <span className="dados-value">{cliente.dadosCadastrais.cpf}</span>
+                  <span className="dados-value">{dadosCadastrais.cpf}</span>
                 </div>
               </div>
               <button className="btn-editar">
@@ -308,12 +313,16 @@ export default function Visao360View() {
                 <AlertCircle size={16} />
                 <div className="dados-content">
                   <span className="dados-label">Situação financeira</span>
-                  <span className="dados-value warning">{cliente.dadosCadastrais.situacaoFinanceira.status}</span>
+                  <span className={`dados-value ${dadosCadastrais.situacaoFinanceira?.emAtraso ? 'warning' : ''}`}>
+                    {dadosCadastrais.situacaoFinanceira?.status}
+                  </span>
                 </div>
               </div>
-              <button className="btn-atualizar">
-                {cliente.dadosCadastrais.situacaoFinanceira.acao}
-              </button>
+              {dadosCadastrais.situacaoFinanceira?.acao && (
+                <button className="btn-atualizar">
+                  {dadosCadastrais.situacaoFinanceira.acao}
+                </button>
+              )}
             </div>
 
             <button className="btn-mostrar-mais">Mostrar mais</button>
@@ -329,7 +338,7 @@ export default function Visao360View() {
               </button>
             </div>
             <div className="apps-list">
-              {cliente.apps.map((app, index) => (
+              {apps.map((app, index) => (
                 <div key={index} className="app-item">
                   <Smartphone size={16} />
                   <span>{app.nome}</span>
@@ -341,7 +350,7 @@ export default function Visao360View() {
           {/* Card Produtos */}
           <div className="card-produtos">
             <div className="produtos-list">
-              {cliente.produtos.map((produto, index) => (
+              {produtos.map((produto, index) => (
                 <div key={index} className="produto-item">
                   <Tv size={16} />
                   <span>{produto.nome}</span>
@@ -399,16 +408,16 @@ export default function Visao360View() {
 
         .cliente-nome {
           font-weight: 600;
+          color: #111827;
           font-size: 16px;
-          color: #1f2937;
         }
 
         .tempo-atendimento {
           display: flex;
           align-items: center;
           gap: 4px;
-          font-size: 13px;
           color: #6b7280;
+          font-size: 13px;
         }
 
         .acoes-rapidas {
@@ -421,23 +430,22 @@ export default function Visao360View() {
           align-items: center;
           gap: 4px;
           padding: 8px 12px;
-          background: white;
           border: 1px solid #e5e7eb;
-          border-radius: 20px;
-          color: #6b7280;
+          border-radius: 8px;
+          background: white;
+          color: #374151;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .acao-btn:hover {
           background: #f3f4f6;
-          border-color: #8b5cf6;
-          color: #8b5cf6;
+          border-color: #d1d5db;
         }
 
         .acao-btn.dropdown .dropdown-icon {
           transform: rotate(90deg);
-          margin-left: 2px;
+          opacity: 0.5;
         }
 
         .header-tabs {
@@ -450,49 +458,52 @@ export default function Visao360View() {
           align-items: center;
           gap: 6px;
           padding: 8px 16px;
-          background: white;
           border: 1px solid #e5e7eb;
           border-radius: 20px;
-          font-size: 13px;
-          font-weight: 500;
+          background: white;
           color: #6b7280;
+          font-size: 14px;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .header-tab:hover {
-          border-color: #8b5cf6;
-          color: #8b5cf6;
+          background: #f3f4f6;
         }
 
         .header-tab.active {
           background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
-          border-color: transparent;
           color: white;
+          border-color: transparent;
         }
 
         .header-tab.mais-opcoes {
-          background: transparent;
-          border: none;
+          border-style: dashed;
         }
 
         /* Conteúdo Principal */
         .visao360-content {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr 380px;
           gap: 20px;
           padding: 20px;
           overflow-y: auto;
           flex: 1;
         }
 
-        .coluna-esquerda, .coluna-direita {
+        .coluna-esquerda {
           display: flex;
           flex-direction: column;
           gap: 16px;
         }
 
-        /* Cards Base */
+        .coluna-direita {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        /* Card Base */
         .card-instancia,
         .card-protocolos,
         .card-avisos,
@@ -507,8 +518,8 @@ export default function Visao360View() {
 
         .card-header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           margin-bottom: 12px;
         }
 
@@ -517,32 +528,30 @@ export default function Visao360View() {
           align-items: center;
           gap: 8px;
           font-weight: 600;
+          color: #111827;
           font-size: 14px;
-          color: #1f2937;
         }
 
         /* Card Instância */
         .telefone-instancia {
-          font-size: 13px;
           color: #6b7280;
+          font-size: 14px;
         }
 
         .btn-gerenciar {
           width: 100%;
           padding: 10px;
-          background: white;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
+          background: white;
           color: #374151;
+          font-size: 14px;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .btn-gerenciar:hover {
-          border-color: #8b5cf6;
-          color: #8b5cf6;
+          background: #f3f4f6;
         }
 
         /* Card Protocolos */
@@ -550,17 +559,21 @@ export default function Visao360View() {
           display: flex;
           align-items: center;
           gap: 4px;
+          color: #6b7280;
+          font-size: 13px;
           background: none;
           border: none;
-          font-size: 13px;
-          color: #8b5cf6;
           cursor: pointer;
+        }
+
+        .link-todos:hover {
+          color: #8b5cf6;
         }
 
         .protocolo-atual {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           padding: 12px;
           background: #f9fafb;
           border-radius: 8px;
@@ -571,8 +584,8 @@ export default function Visao360View() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 13px;
           color: #6b7280;
+          font-size: 13px;
         }
 
         .protocolo-numero {
@@ -580,13 +593,13 @@ export default function Visao360View() {
           align-items: center;
           gap: 8px;
           font-weight: 600;
-          color: #1f2937;
+          color: #111827;
         }
 
         .btn-copy {
           padding: 4px;
-          background: none;
           border: none;
+          background: none;
           color: #8b5cf6;
           cursor: pointer;
         }
@@ -595,8 +608,8 @@ export default function Visao360View() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 13px;
           color: #6b7280;
+          font-size: 13px;
           margin-bottom: 12px;
         }
 
@@ -605,38 +618,42 @@ export default function Visao360View() {
           align-items: center;
           gap: 8px;
           padding: 10px 12px;
-          background: #f3e8ff;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
           border-radius: 8px;
-          font-size: 13px;
           color: #7c3aed;
-          margin-bottom: 16px;
+          font-size: 13px;
+          margin-bottom: 12px;
         }
 
         .protocolos-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, 1fr);
           gap: 12px;
         }
 
         .protocolo-card {
           padding: 12px;
-          background: #f9fafb;
-          border-radius: 8px;
           border: 1px solid #e5e7eb;
-          position: relative;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .protocolo-card:hover {
+          border-color: #8b5cf6;
+          box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
         }
 
         .protocolo-card-header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           margin-bottom: 8px;
         }
 
         .protocolo-id {
           font-weight: 600;
-          font-size: 13px;
-          color: #1f2937;
+          color: #111827;
         }
 
         .protocolo-tags {
@@ -648,7 +665,7 @@ export default function Visao360View() {
 
         .tag {
           padding: 4px 8px;
-          border-radius: 12px;
+          border-radius: 4px;
           font-size: 11px;
           font-weight: 500;
         }
@@ -656,19 +673,11 @@ export default function Visao360View() {
         .tag-primary {
           background: #fef3c7;
           color: #d97706;
-          border: 1px solid #fcd34d;
         }
 
         .tag-secondary {
           background: #fee2e2;
           color: #dc2626;
-          border: 1px solid #fca5a5;
-        }
-
-        .status-icon {
-          position: absolute;
-          top: 12px;
-          right: 32px;
         }
 
         .status-icon.pending {
@@ -676,37 +685,31 @@ export default function Visao360View() {
         }
 
         .protocolo-descricao {
-          font-size: 12px;
           color: #6b7280;
+          font-size: 12px;
           line-height: 1.4;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
         }
 
         .protocolo-footer {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
-          align-items: center;
-        }
-
-        .protocolo-plano, .protocolo-data {
-          display: flex;
-          align-items: center;
-          gap: 4px;
           font-size: 11px;
           color: #6b7280;
         }
 
-        .protocolo-plano svg, .protocolo-data svg {
-          color: #8b5cf6;
+        .protocolo-plano,
+        .protocolo-data {
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .protocolo-tipo {
-          padding: 2px 8px;
-          background: #e5e7eb;
+          padding: 2px 6px;
+          background: #f3f4f6;
           border-radius: 4px;
-          font-size: 10px;
-          color: #374151;
         }
 
         /* Card Avisos */
@@ -718,17 +721,22 @@ export default function Visao360View() {
           background: #f9fafb;
           border-radius: 8px;
           margin-top: 12px;
+          cursor: pointer;
+        }
+
+        .aviso-item:hover {
+          background: #f3f4f6;
         }
 
         .aviso-icon {
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #fef3c7;
-          border-radius: 8px;
-          color: #d97706;
+          color: white;
         }
 
         .aviso-content {
@@ -740,15 +748,15 @@ export default function Visao360View() {
           align-items: center;
           gap: 8px;
           font-weight: 600;
-          font-size: 13px;
-          color: #1f2937;
+          color: #111827;
+          font-size: 14px;
         }
 
         .aviso-badge {
           padding: 2px 8px;
           border-radius: 4px;
-          font-size: 10px;
-          font-weight: 600;
+          font-size: 11px;
+          font-weight: 500;
         }
 
         .aviso-badge.urgente {
@@ -758,16 +766,23 @@ export default function Visao360View() {
 
         .aviso-descricao {
           display: block;
-          font-size: 12px;
           color: #6b7280;
-          margin-top: 4px;
+          font-size: 12px;
+          margin-top: 2px;
         }
 
-        /* Card IA Resumo - Destaque Roxo */
-        .card-ia-resumo {
-          background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-          border-radius: 16px;
+        .aviso-empty {
+          color: #9ca3af;
+          font-size: 13px;
+          text-align: center;
           padding: 20px;
+        }
+
+        /* Card IA Resumo */
+        .card-ia-resumo {
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          border-radius: 12px;
+          padding: 16px;
           color: white;
         }
 
@@ -775,72 +790,70 @@ export default function Visao360View() {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .btn-voltar {
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255, 255, 255, 0.2);
+          padding: 4px;
           border: none;
-          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 6px;
           color: white;
           cursor: pointer;
         }
 
-        .btn-voltar svg {
+        .btn-voltar:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .rotate-180 {
           transform: rotate(180deg);
         }
 
         .ia-titulo {
           font-weight: 600;
-          font-size: 16px;
+          font-size: 14px;
         }
 
         .ia-badge {
           margin-left: auto;
-          padding: 4px 12px;
+          padding: 4px 10px;
           background: rgba(255, 255, 255, 0.2);
           border-radius: 12px;
           font-size: 12px;
-          font-weight: 500;
         }
 
         .ia-mensagem {
           font-size: 14px;
           line-height: 1.5;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
           opacity: 0.95;
         }
 
         .btn-acao-ia {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 20px;
+          gap: 6px;
+          padding: 10px 16px;
           background: white;
           border: none;
-          border-radius: 20px;
-          font-size: 13px;
-          font-weight: 600;
+          border-radius: 8px;
           color: #7c3aed;
+          font-weight: 600;
+          font-size: 14px;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .btn-acao-ia:hover {
-          transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          background: #f3f4f6;
         }
 
         /* Card Dados Cadastrais */
         .dados-row {
           display: flex;
-          align-items: flex-start;
           justify-content: space-between;
+          align-items: flex-start;
           padding: 12px 0;
           border-bottom: 1px solid #f3f4f6;
         }
@@ -852,11 +865,7 @@ export default function Visao360View() {
         .dados-item {
           display: flex;
           gap: 12px;
-        }
-
-        .dados-item svg {
-          color: #8b5cf6;
-          margin-top: 2px;
+          color: #6b7280;
         }
 
         .dados-content {
@@ -867,34 +876,31 @@ export default function Visao360View() {
 
         .dados-label {
           font-size: 12px;
-          color: #6b7280;
+          color: #9ca3af;
         }
 
         .dados-value {
           font-size: 14px;
-          font-weight: 500;
-          color: #1f2937;
+          color: #111827;
         }
 
         .dados-value.warning {
-          color: #d97706;
-          font-size: 12px;
+          color: #dc2626;
         }
 
         .dados-tags {
           display: flex;
-          gap: 8px;
+          gap: 6px;
         }
 
         .tipo-tag {
           padding: 4px 10px;
           border-radius: 12px;
-          font-size: 11px;
-          font-weight: 500;
+          font-size: 12px;
         }
 
         .tipo-tag.platinum {
-          background: #ede9fe;
+          background: #f3e8ff;
           color: #7c3aed;
         }
 
@@ -905,50 +911,51 @@ export default function Visao360View() {
 
         .btn-editar {
           padding: 6px;
-          background: none;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
+          background: white;
           color: #6b7280;
           cursor: pointer;
         }
 
         .btn-editar:hover {
-          border-color: #8b5cf6;
-          color: #8b5cf6;
+          background: #f3f4f6;
         }
 
         .btn-atualizar {
           padding: 6px 12px;
-          background: white;
-          border: 1px solid #8b5cf6;
+          border: 1px solid #e5e7eb;
           border-radius: 6px;
+          background: white;
+          color: #374151;
           font-size: 12px;
-          font-weight: 500;
-          color: #8b5cf6;
           cursor: pointer;
         }
 
         .btn-atualizar:hover {
-          background: #8b5cf6;
-          color: white;
+          background: #f3f4f6;
         }
 
         .btn-mostrar-mais {
           width: 100%;
           padding: 10px;
-          background: none;
           border: none;
-          font-size: 13px;
+          background: none;
           color: #8b5cf6;
+          font-size: 13px;
           cursor: pointer;
           margin-top: 8px;
+        }
+
+        .btn-mostrar-mais:hover {
+          text-decoration: underline;
         }
 
         /* Card Apps */
         .apps-header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           margin-bottom: 12px;
         }
 
@@ -956,10 +963,10 @@ export default function Visao360View() {
           display: flex;
           align-items: center;
           gap: 4px;
+          color: #8b5cf6;
+          font-size: 13px;
           background: none;
           border: none;
-          font-size: 12px;
-          color: #8b5cf6;
           cursor: pointer;
         }
 
@@ -972,16 +979,12 @@ export default function Visao360View() {
         .app-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
+          gap: 10px;
+          padding: 10px;
           background: #f9fafb;
           border-radius: 8px;
-          font-size: 13px;
           color: #374151;
-        }
-
-        .app-item svg {
-          color: #8b5cf6;
+          font-size: 14px;
         }
 
         /* Card Produtos */
@@ -994,19 +997,15 @@ export default function Visao360View() {
         .produto-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
+          gap: 10px;
+          padding: 10px;
           background: #f9fafb;
           border-radius: 8px;
-          font-size: 13px;
           color: #374151;
+          font-size: 14px;
         }
 
-        .produto-item svg {
-          color: #8b5cf6;
-        }
-
-        /* Responsivo */
+        /* Responsive */
         @media (max-width: 1200px) {
           .visao360-content {
             grid-template-columns: 1fr;
@@ -1017,6 +1016,16 @@ export default function Visao360View() {
           .atendimento-header {
             flex-wrap: wrap;
             gap: 12px;
+          }
+
+          .acoes-rapidas {
+            order: 3;
+            width: 100%;
+            justify-content: center;
+          }
+
+          .header-tabs {
+            order: 2;
           }
 
           .protocolos-grid {

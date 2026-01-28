@@ -3,9 +3,7 @@
  * Integração com o BFF (Backend for Frontend)
  */
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 
-                     process.env.REACT_APP_API_URL || 
-                     'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001/api';
 
 class ApiService {
   constructor() {
@@ -235,6 +233,48 @@ class ApiService {
 
   async getAgentCases() {
     return this.request('/agents/me/cases');
+  }
+
+  // ============ VISÃO 360 API ============
+  async getVisao360ByTelefone(telefone) {
+    return this.request(`/visao360/atendimento/${encodeURIComponent(telefone)}`);
+  }
+
+  async getVisao360ByCustomerId(customerId) {
+    return this.request(`/visao360/atendimento/cliente/${customerId}`);
+  }
+
+  async getVisao360Protocolos(customerId, status = 'todos') {
+    return this.request(`/visao360/protocolos/${customerId}?status=${status}`);
+  }
+
+  async getVisao360Protocolo(protocoloId) {
+    return this.request(`/visao360/protocolo/${protocoloId}`);
+  }
+
+  async getVisao360Instancia(telefone) {
+    return this.request(`/visao360/instancia/${encodeURIComponent(telefone)}`);
+  }
+
+  async getVisao360Produtos(customerId) {
+    return this.request(`/visao360/produtos/${customerId}`);
+  }
+
+  async getVisao360Avisos(customerId) {
+    return this.request(`/visao360/avisos/${customerId}`);
+  }
+
+  async getVisao360IAResumo(customerId, protocoloId = null) {
+    const params = protocoloId ? `?protocoloId=${protocoloId}` : '';
+    return this.request(`/visao360/ia-resumo/${customerId}${params}`);
+  }
+
+  async getVisao360Financeiro(customerId) {
+    return this.request(`/visao360/financeiro/${customerId}`);
+  }
+
+  async getVisao360Apps(customerId) {
+    return this.request(`/visao360/apps/${customerId}`);
   }
 
   // ============ DASHBOARD API ============
